@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06062B">
+<title>Creator Ninjas by Mena</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥷</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Work+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06062B;--fg:#fff;--mute:#9a9a9a;--line:#2B2B85;--card:#06062B;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Work Sans',system-ui,sans-serif}
+h1,h2,h3{font-family:'Bowlby One','Arial Black',sans-serif;font-weight:400;letter-spacing:.5px;margin:.2em 0}
+a{color:var(--fg)}
+.wrap{max-width:900px;margin:auto;padding:16px}
+.card{border:2px solid var(--fg);border-radius:4px;padding:16px;margin:14px 0;background:var(--card);box-shadow:5px 5px 0 var(--fg)}
+.sm{color:var(--mute);font-size:.85rem}
+input,select,textarea,button{font:inherit;color:var(--fg);background:#06062B;border:2px solid var(--fg);border-radius:4px;padding:10px;width:100%;margin:5px 0}
+button{cursor:pointer;font-weight:800;width:auto;background:var(--fg);color:#06062B}
+button.ghost{background:#06062B;color:var(--fg)}
+button:hover{transform:translate(-2px,-2px);box-shadow:3px 3px 0 #888}
+:focus-visible{outline:3px dashed #fff;outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0;border-bottom:2px solid var(--fg);position:sticky;top:0;background:#06062B;z-index:5}
+nav button{background:#06062B;color:var(--fg);white-space:nowrap}
+nav button.on{background:var(--fg);color:#06062B}
+.big{font-family:'Bowlby One';font-size:2.4rem;line-height:1}
+.bar{height:22px;border:2px solid var(--fg);position:relative;background:repeating-linear-gradient(90deg,#06062B 0 10px,#12124A 10px 20px)}
+.bar i{display:block;height:100%;background:#fff}
+.meter{display:flex;gap:6px}.meter span{flex:1;text-align:center;padding:8px 2px;border:2px solid var(--line);color:var(--mute);font-weight:800;font-size:.8rem}
+.meter span.on{background:#fff;color:#06062B;border-color:#fff}
+table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid var(--line);padding:8px 4px;text-align:left;font-size:.9rem}
+.tag{display:inline-block;border:2px solid #fff;padding:2px 8px;margin:2px;font-weight:800;font-size:.8rem}
+.tag.lock{border-color:var(--line);color:#555}
+.err{border:2px dashed #fff;padding:8px;margin:8px 0}
+.hero{text-align:center;padding:30px 0}
+details{margin:6px 0}summary{cursor:pointer;font-weight:800}
+@media(max-width:520px){.two{grid-template-columns:1fr}.big{font-size:1.9rem}}
+@media(prefers-reduced-motion:no-preference){.spin{animation:sp 14s linear infinite;transform-origin:50% 50%}}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+// ---------- storage (demo: browser only. See README steps to connect Supabase for real accounts) ----------
+const L=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const S=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const sb=supabase.createClient('https://pkvalxywruxpnzlzvcmq.supabase.co','sb_publishable_k7Rw16CuJk6q8dB6uYUBfA_GHBXpH22');
+let U=null,board=[],tab='home';
+const save=()=>{if(U)S('cn_done_'+U.id,U.done)};
+const cur=()=>U;
+async function load(){
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){U=null;return render()}
+ const id=session.user.id;
+ const [p,po,h,b]=await Promise.all([sb.from('profiles').select('*').eq('id',id).single(),sb.from('posts').select('*').eq('user_id',id).order('created_at'),sb.from('follower_history').select('*').eq('user_id',id),sb.from('leaderboard').select('*')]);
+ if(p.error){U=null;return render()}
+ const r=p.data;
+ U={id,name:r.name,email:r.email,ig:r.ig,tt:r.tt,followers:r.followers,goal:r.goal,niche:r.niche,lastUpdate:Date.parse(r.last_update),posts:(po.data||[]).map(x=>({id:x.id,plat:x.plat,type:x.type,mission:x.mission,at:Date.parse(x.created_at)})),history:h.data||[],done:L('cn_done_'+id,{})};
+ board=b.data||[];render()}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n;
+
+const LOGO=(s=90)=>`<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-label="Creator Ninjas logo"><circle cx="50" cy="50" r="47" fill="#fff"/><g class="spin"><path fill="#06062B" opacity=".22" d="M50 2L60 40L98 50L60 60L50 98L40 60L2 50L40 40Z"/></g><path fill="#06062B" d="M72 40Q70 60 63 82L72 77L75 42Z"/><path fill="#06062B" d="M76 40Q83 58 88 78L79 76L74 42Z"/><circle cx="50" cy="50" r="26" fill="#06062B"/><path d="M26 34.5H74M25.5 40H74.5" stroke="#fff" stroke-width="2.2"/><circle cx="73" cy="38" r="4.5" fill="#06062B" stroke="#fff" stroke-width="2"/><rect x="27" y="45" width="46" height="13" rx="6.5" fill="#fff"/><circle cx="40" cy="51.5" r="3.4" fill="#06062B"/><circle cx="60" cy="51.5" r="3.4" fill="#06062B"/></svg>`;
+
+// ---------- ranks ----------
+const RANKS=[
+ {n:'Genin',lvl:'Beginner',ic:'🥋',min:0,max:1e3,posts:100},
+ {n:'Chunin',lvl:'Intermediate',ic:'🍥',min:1e3,max:25e3,posts:500},
+ {n:'Jonin',lvl:'Advanced',ic:'⚔️',min:25e3,max:1e5,posts:1000},
+ {n:'Kage',lvl:'Professional',ic:'👑',min:1e5,max:1e6,posts:2000}];
+const rank=u=>{let f=u.followers;return RANKS.slice().reverse().find(r=>f>=r.min)||RANKS[0]};
+const rl=r=>`${r.ic} ${r.n} (${r.lvl})`;
+
+// ---------- posts ----------
+const MISSIONS={attract:'🧲 Attract (bring new people in)',nurture:'🤝 Nurture (build trust)',position:'🎯 Position (show you are the expert)',convert:'💰 Convert (get them to buy or book)',none:'🤷 Not sure yet'};
+function parseLink(raw){
+ let u;try{u=new URL(raw.trim())}catch(e){return null}
+ const h=u.hostname.replace('www.',''),p=u.pathname;let plat,type,id;
+ if(h.includes('instagram.com')){plat='Instagram';const m=p.match(/\/(reels?|p|tv)\/([\w-]+)/);if(!m)return null;type=m[1]=='p'?'Carousel / Post':'Reel';id='ig:'+m[2]}
+ else if(h.includes('tiktok.com')){plat='TikTok';const m=p.match(/\/(video|photo)\/(\d+)/);if(!m)return null;type=m[1]=='photo'?'Carousel / Photo':'Reel / Video';id='tt:'+m[2]}
+ else return null;
+ return {plat,type,id};
+}
+const weekKey=d=>{const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()-((t.getDay()+6)%7));return t.toISOString().slice(0,10)};
+const weekPosts=u=>u.posts.filter(p=>weekKey(p.at)===weekKey(Date.now())).length;
+const monthPosts=u=>u.posts.filter(p=>{const a=new Date(p.at),n=new Date();return a.getMonth()==n.getMonth()&&a.getFullYear()==n.getFullYear()}).length;
+function streak(u){let s=0,w=new Date();w.setHours(0,0,0,0);const cnt=k=>u.posts.filter(p=>weekKey(p.at)==k).length;
+ let k=weekKey(w);if(cnt(k)<3)w.setDate(w.getDate()-7);
+ for(let i=0;i<200;i++){if(cnt(weekKey(w))>=3){s++;w.setDate(w.getDate()-7)}else break}return s}
+
+const ACH=[
+ ['🥷','First Shuriken','Submit your first post',u=>u.posts.length>=1],
+ ['⭐','Five Stars','Submit 5 posts',u=>u.posts.length>=5],
+ ['🔥','Healthy Week','Post 3 times in one week',u=>weekPosts(u)>=3||streak(u)>=1],
+ ['⚡','Overachiever','Post 5+ times in one week',u=>weekPosts(u)>=5],
+ ['🗡️','Three-Week Streak','3 healthy weeks in a row',u=>streak(u)>=3],
+ ['🏯','Dojo Master','Submit 25 posts',u=>u.posts.length>=25],
+ ['🎯','Full Mission','Use all 4 content missions',u=>['attract','nurture','position','convert'].every(m=>u.posts.some(p=>p.mission==m))],
+ ['📈','Growth Check-in','Update followers 4 times',u=>u.history.length>=5],
+ ['💯','Century','Submit 100 posts',u=>u.posts.length>=100]];
+
+const TASKS=['📝 Write one hook (the first sentence that grabs attention)','🎬 Film or design one piece of content','💬 Reply to 5 comments on your posts','🔎 Watch 3 posts from creators you admire','📤 Post something and submit the link here'];
+
+// ---------- views ----------
+function render(){
+ const u=cur();const a=$('#app');
+ if(!u){a.innerHTML=landing();return}
+ const tabs=[['home','🏠 Dashboard'],['submit','📤 Submit Post'],['quests','✅ Daily Quests'],['rank','🏆 Leaderboard'],['profile','🥷 Profile']];
+ a.innerHTML=`<header style="display:flex;align-items:center;gap:10px">${LOGO(48)}<div><h3 style="margin:0">CREATOR NINJAS</h3><div class="sm">by Mena</div></div></header>
+ <nav>${tabs.map(t=>`<button class="${tab==t[0]?'on':''}" onclick="tab='${t[0]}';render()">${t[1]}</button>`).join('')}</nav>${VIEWS[tab](u)}`;
+}
+function landing(){return `<div class="hero">${LOGO(130)}<h1 style="font-size:2.6rem">CREATOR NINJAS</h1><div class="sm">by Mena</div>
+<p style="max-width:520px;margin:14px auto">Post consistently. Grow your audience. Train like a ninja 🥷 Our goal: <b>3 posts every week</b>. We track it for you.</p></div>
+<div class="grid"><div class="card"><h2>🔑 Log in</h2><form onsubmit="return login(event)"><input id="le" type="email" placeholder="Email" required autocomplete="email"><input id="lp" type="password" placeholder="Password" required autocomplete="current-password"><div id="lerr"></div><button>Enter the dojo</button></form></div>
+<div class="card"><h2>⭐ Join free</h2><div class="sm">New here? Takes one minute.</div><form onsubmit="return signup(event)">
+<input id="sn" placeholder="Your name" required><input id="se" type="email" placeholder="Email" required autocomplete="email">
+<input id="sp" type="password" placeholder="Create a password (6+ characters)" minlength="6" required autocomplete="new-password">
+<div class="two"><input id="si" placeholder="Instagram @username"><input id="st" placeholder="TikTok @username"></div>
+<div class="two"><input id="sf" type="number" min="0" placeholder="Followers now" required><input id="sg" type="number" min="1" placeholder="Followers goal by 2027" required></div>
+<input id="sc" placeholder="Your niche (e.g. fitness, food, finance)" required>
+<select id="sx"><option value="">Where did you hear about us?</option><option>Instagram</option><option>TikTok</option><option>A friend</option><option>Other</option></select>
+<div id="serr"></div><button>Start training 🥷</button></form></div></div>
+<div class="card"><h3>New to ninja words? 🤔</h3><div class="sm">Your rank = your follower size.</div><table>${RANKS.map(r=>`<tr><td>${r.ic}</td><td><b>${r.n}</b> (${r.lvl})</td><td>${fmt(r.min)} to ${fmt(r.max)} followers</td></tr>`).join('')}</table></div>`}
+async function login(e){e.preventDefault();
+ const {error}=await sb.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});
+ if(error){$('#lerr').innerHTML='<div class="err">'+esc(error.message)+'</div>';return false}
+ await load();return false}
+async function signup(e){e.preventDefault();
+ const ig=$('#si').value.trim().replace('@',''),tt=$('#st').value.trim().replace('@','');
+ if(!ig&&!tt){$('#serr').innerHTML='<div class="err">Add at least one username (Instagram or TikTok).</div>';return false}
+ const {data,error}=await sb.auth.signUp({email:$('#se').value.trim(),password:$('#sp').value,options:{data:{name:$('#sn').value.trim(),ig,tt,followers:+$('#sf').value,goal:+$('#sg').value,niche:$('#sc').value.trim(),src:$('#sx').value}}});
+ if(error){$('#serr').innerHTML='<div class="err">'+esc(error.message)+'</div>';return false}
+ if(!data.session){$('#serr').innerHTML='<div class="err">✅ Almost done! Check your email, click the confirm link, then log in.</div>';return false}
+ await load();return false}
+
+const VIEWS={
+home:u=>{const r=rank(u),w=weekPosts(u),m=monthPosts(u);
+ const st=w>=5?3:w>=3?2:w>=1&&new Date().getDay()>=4||w==0&&new Date().getDay()>=3?0:1;
+ const state=w>=5?2:w>=3?1:0;const need=Math.max(0,3-w);
+ const msg=['⚠️ Falling behind: '+need+' more post'+(need==1?'':'s')+' this week to stay on track.','✅ Healthy: you hit the weekly minimum. Keep going!','🚀 Overachieving: you are crushing it!'][state];
+ const gp=Math.min(100,Math.round(u.followers/u.goal*100));
+ const days=Math.ceil((new Date(weekKey(Date.now())).getTime()+7*864e5-Date.now())/864e5);
+ const nx=RANKS[RANKS.indexOf(r)+1];
+ const due=Date.now()-u.lastUpdate>7*864e5;
+ return `<div class="card"><div class="sm">Welcome back, ${esc(u.name)}</div><h2>${rl(r)}</h2>
+ <div class="grid"><div><div class="big">${w}/3</div><div class="sm">posts this week (${days} day${days>1?'s':''} left)</div></div><div><div class="big">${m}</div><div class="sm">posts this month</div></div><div><div class="big">🔥${streak(u)}</div><div class="sm">week streak</div></div></div></div>
+ <div class="card"><h3>Consistency meter</h3><div class="meter"><span class="${state==0?'on':''}">⚠️ FALLING BEHIND<br>0-2 posts</span><span class="${state==1?'on':''}">✅ HEALTHY<br>3-4 posts</span><span class="${state==2?'on':''}">🚀 OVERACHIEVING<br>5+ posts</span></div><p><b>${msg}</b></p></div>
+ ${due?`<div class="card"><b>📅 Weekly check-in due!</b> Update your follower count in your Profile tab.</div>`:''}
+ <div class="card"><h3>🎯 Goal for 2027: ${fmt(u.goal)} followers</h3><div class="bar"><i style="width:${gp}%"></i></div><div class="sm">${fmt(u.followers)} now (${gp}%)</div>
+ ${nx?`<p class="sm">Next rank: ${rl(nx)} at ${fmt(nx.min)} followers.</p>`:''}
+ <p class="sm">Total posts: ${u.posts.length} / ${r.posts} (goal for ${r.n})</p><div class="bar"><i style="width:${Math.min(100,u.posts.length/r.posts*100)}%"></i></div></div>
+ <div class="card"><h3>🏅 Achievements</h3>${ACH.map(a=>`<span class="tag ${a[3](u)?'':'lock'}" title="${a[2]}">${a[0]} ${a[1]}${a[3](u)?'':' 🔒'}</span>`).join('')}</div>
+ <div class="card"><h3>📜 Your posts</h3>${u.posts.length?`<table><tr><th>Date</th><th>Type</th><th>Mission</th></tr>${u.posts.slice().reverse().map(p=>`<tr><td>${new Date(p.at).toLocaleDateString()}</td><td>${p.plat} ${p.type}</td><td><select onchange="setM('${p.id}',this.value)">${Object.entries(MISSIONS).map(([k,v])=>`<option value="${k}" ${p.mission==k?'selected':''}>${v}</option>`).join('')}</select></td></tr>`).join('')}</table>`:'<div class="sm">No posts yet. Go to Submit Post and add your first link! 🥷</div>'}</div>`},
+submit:u=>`<div class="card"><h2>📤 Submit a post</h2><div class="sm">Paste the link to your Instagram or TikTok post. We detect if it is a Reel or a Carousel.</div>
+ <input id="pl" placeholder="https://www.instagram.com/reel/..." >
+ <select id="pm"><option value="none">Content mission (what is this post for?)</option>${Object.entries(MISSIONS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+ <details><summary>What are the missions?</summary><div class="sm">Attract = reach new people. Nurture = build trust. Position = show your expertise. Convert = sell or book calls. Not sure? Pick "Not sure yet".</div></details>
+ <div id="pmsg"></div><button onclick="addPost()">Submit post</button></div>`,
+quests:u=>{const k=new Date().toISOString().slice(0,10);const d=u.done[k]||[];
+ return `<div class="card"><h2>✅ Today's training</h2><div class="sm">Tick these off. Small steps every day.</div>${TASKS.map((t,i)=>`<label style="display:block;padding:8px 0"><input type="checkbox" style="width:auto" ${d.includes(i)?'checked':''} onchange="tick(${i},this.checked)"> ${t}</label>`).join('')}
+ <p><b>${d.length}/${TASKS.length}</b> done ${d.length==TASKS.length?'🎉 Mission complete!':''}</p></div>`},
+rank:u=>{const l=board.slice().sort((a,b)=>b.post_count-a.post_count||b.followers-a.followers);
+ return `<div class="card"><h2>🏆 Leaderboard</h2><div class="sm">Ranked by posts submitted.</div><table><tr><th>#</th><th>Ninja</th><th>Rank</th><th>Posts</th></tr>${l.map((x,i)=>`<tr><td>${['🥇','🥈','🥉'][i]||i+1}</td><td>${esc(x.name)}<div class="sm">${x.ig?'IG @'+esc(x.ig):''} ${x.tt?'TT @'+esc(x.tt):''}</div></td><td>${rank(x).ic} ${rank(x).n}</td><td>${x.post_count}</td></tr>`).join('')}</table></div>`},
+profile:u=>{const r=rank(u);return `<div class="card" style="text-align:center">${LOGO(80)}<h2>${esc(u.name)}</h2><div class="big" style="font-size:1.6rem">${rl(r)}</div>
+ <p>${u.ig?'📸 @'+esc(u.ig):''} ${u.tt?'🎵 @'+esc(u.tt):''}</p><p>Niche: ${esc(u.niche)}<br>Followers: <b>${fmt(u.followers)}</b> | 2027 goal: <b>${fmt(u.goal)}</b></p>
+ <div>${ACH.filter(a=>a[3](u)).map(a=>`<span class="tag">${a[0]} ${a[1]}</span>`).join('')}</div></div>
+ <div class="card"><h3>📅 Weekly check-in</h3><div class="sm">Update your follower count every week.</div><input id="nf" type="number" min="0" value="${u.followers}"><button onclick="upF()">Save followers</button>
+ <p class="sm">Email: ${esc(u.email)}</p></div><div class="card"><button class="ghost" onclick="logout()">Log out</button></div>`}
+};
+async function setM(id,v){await sb.from('posts').update({mission:v}).eq('id',id);cur().posts.find(p=>p.id==id).mission=v}
+async function addPost(){const u=cur(),i=parseLink($('#pl').value),o=$('#pmsg');
+ if(!i){o.innerHTML='<div class="err">❌ We could not read that link. Use a full Instagram (/reel/ or /p/) or TikTok (/video/) post link.</div>';return}
+ const {error}=await sb.from('posts').insert({user_id:u.id,post_key:i.id,plat:i.plat,type:i.type,mission:$('#pm').value});
+ if(error){o.innerHTML=error.code=='23505'?'<div class="err">❌ Duplicate: this post was already submitted.</div>':'<div class="err">❌ '+esc(error.message)+'</div>';return}
+ await load();$('#pmsg').innerHTML=`<div class="err">✅ Counted! Detected: <b>${i.plat} ${i.type}</b>. Total posts: ${cur().posts.length} 🥷</div>`}
+function tick(i,c){const u=cur(),k=new Date().toISOString().slice(0,10);let d=u.done[k]||[];d=c?[...new Set([...d,i])]:d.filter(x=>x!=i);u.done[k]=d;save();render()}
+async function upF(){const u=cur(),f=+$('#nf').value;await sb.from('profiles').update({followers:f,last_update:new Date().toISOString()}).eq('id',u.id);await sb.from('follower_history').insert({user_id:u.id,followers:f});await load()}
+async function logout(){await sb.auth.signOut();U=null;render()}
+load();
+</script>
+</body>
+</html>
